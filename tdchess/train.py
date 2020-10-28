@@ -1,4 +1,4 @@
-from tables import pawntable
+from tables import pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable
 import chess
 import chess.engine
 import numpy as np
@@ -11,21 +11,47 @@ from sklearn.model_selection import train_test_split
 def evaluate(board):
     wp = len(board.pieces(chess.PAWN, chess.WHITE))
     bp = len(board.pieces(chess.PAWN, chess.BLACK))
-    material = 100*(wp-bp)
+    wn = len(board.pieces(chess.KNIGHT, chess.WHITE))
+    bn = len(board.pieces(chess.KNIGHT, chess.BLACK))
+    wb = len(board.pieces(chess.BISHOP, chess.WHITE))
+    bb = len(board.pieces(chess.BISHOP, chess.BLACK))
+    wr = len(board.pieces(chess.ROOK, chess.WHITE))
+    br = len(board.pieces(chess.ROOK, chess.BLACK))
+    wq = len(board.pieces(chess.QUEEN, chess.WHITE))
+    bq = len(board.pieces(chess.QUEEN, chess.BLACK))
+
+    #material = 100*(wp-bp)+320*(wn-bn)+330*(wb-bb)+500*(wr-br)+900*(wq-bq)
+    material = 100*(wp-bp)+320*(wn-bn)
 
     pawnsq = sum([pawntable[i] for i in board.pieces(chess.PAWN, chess.WHITE)])
     pawnsq= pawnsq + sum([-pawntable[chess.square_mirror(i)]
                                     for i in board.pieces(chess.PAWN, chess.BLACK)])
+    knightsq = sum([knightstable[i] for i in board.pieces(chess.KNIGHT, chess.WHITE)])
+    knightsq = knightsq + sum([-knightstable[chess.square_mirror(i)]
+                                    for i in board.pieces(chess.KNIGHT, chess.BLACK)])
+    bishopsq= sum([bishopstable[i] for i in board.pieces(chess.BISHOP, chess.WHITE)])
+    bishopsq= bishopsq + sum([-bishopstable[chess.square_mirror(i)]
+                                    for i in board.pieces(chess.BISHOP, chess.BLACK)])
+    rooksq = sum([rookstable[i] for i in board.pieces(chess.ROOK, chess.WHITE)])
+    rooksq = rooksq + sum([-rookstable[chess.square_mirror(i)]
+                                    for i in board.pieces(chess.ROOK, chess.BLACK)])
+    queensq = sum([queenstable[i] for i in board.pieces(chess.QUEEN, chess.WHITE)])
+    queensq = queensq + sum([-queenstable[chess.square_mirror(i)]
+                                    for i in board.pieces(chess.QUEEN, chess.BLACK)])
+    kingsq = sum([kingstable[i] for i in board.pieces(chess.KING, chess.WHITE)])
+    kingsq = kingsq + sum([-kingstable[chess.square_mirror(i)]
+                                    for i in board.pieces(chess.KING, chess.BLACK)])
 
-    material = material + pawnsq
+    material = material + pawnsq + knightsq
+    #material = material + pawnsq + knightsq + bishopsq+ rooksq+ queensq + kingsq
     return material
 
-def get_bitboard(board):
+def get_bitboard(board, piece_type):
     white_pawns = [0 for _ in range(64)]
-    for position in board.pieces(chess.PAWN, chess.WHITE):
+    for position in board.pieces(piece_type, chess.WHITE):
         white_pawns[position] = 1
     black_pawns = [0 for _ in range(64)]
-    for position in board.pieces(chess.PAWN, chess.BLACK):
+    for position in board.pieces(piece_type, chess.BLACK):
         black_pawns[position] = 1
     pieces = white_pawns
     pieces.extend(black_pawns)
@@ -38,7 +64,21 @@ def get_training_data(fens):
     for fen in fens:
         board = chess.Board(fen)
         y = evaluate(board)
-        x = get_bitboard(board)
+
+        x = []
+        pawns = get_bitboard(board, chess.PAWN)
+        knights = get_bitboard(board, chess.KNIGHT)
+        bishops = get_bitboard(board, chess.BISHOP)
+        rooks = get_bitboard(board, chess.ROOK)
+        queens = get_bitboard(board, chess.QUEEN)
+        kings = get_bitboard(board, chess.KING)
+
+        x.extend(pawns)
+        x.extend(knights)
+        #x.extend(bishops)
+        #x.extend(rooks)
+        #x.extend(queens)
+        #x.extend(kings)
 
         X.append(x)
         Y.append(y)
@@ -50,7 +90,7 @@ def get_fens():
 
     fens = []
     count = 0
-    while count < 100:
+    while count < 300:
         game = chess.pgn.read_game(pgn)
         board = chess.Board()
         for move in game.mainline_moves():
@@ -80,6 +120,6 @@ if __name__ == '__main__':
     X_train, X_test, Y_train, Y_test = train_test_split(X,Y)
 
     model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mse', 'mae'])
-    model.fit(X_train,Y_train, epochs=100, validation_data=(X_test, Y_test), validation_freq=10)
+    model.fit(X_train,Y_train, epochs=50, validation_data=(X_test, Y_test), validation_freq=10)
 
     pdb.set_trace()
