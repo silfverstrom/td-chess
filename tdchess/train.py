@@ -20,8 +20,10 @@ def evaluate(board):
     wq = len(board.pieces(chess.QUEEN, chess.WHITE))
     bq = len(board.pieces(chess.QUEEN, chess.BLACK))
 
-    #material = 100*(wp-bp)+320*(wn-bn)+330*(wb-bb)+500*(wr-br)+900*(wq-bq)
-    material = 100*(wp-bp)+320*(wn-bn)
+    #material = 100*(wp-bp)+320*(wn-bn)+330*(wb-bb)
+    #material = 100*(wp-bp)+320*(wn-bn)
+    #material = 100*(wp-bp)+320*(wn-bn)+500*(wr-br)
+    material = 100*(wp-bp)+320*(wn-bn)+330*(wb-bb)+500*(wr-br)+900*(wq-bq)
 
     pawnsq = sum([pawntable[i] for i in board.pieces(chess.PAWN, chess.WHITE)])
     pawnsq= pawnsq + sum([-pawntable[chess.square_mirror(i)]
@@ -42,8 +44,8 @@ def evaluate(board):
     kingsq = kingsq + sum([-kingstable[chess.square_mirror(i)]
                                     for i in board.pieces(chess.KING, chess.BLACK)])
 
-    material = material + pawnsq + knightsq
     #material = material + pawnsq + knightsq + bishopsq+ rooksq+ queensq + kingsq
+    material = pawnsq + knightsq + bishopsq+ rooksq+ queensq + kingsq
     return material
 
 def get_bitboard(board, piece_type):
@@ -75,10 +77,10 @@ def get_training_data(fens):
 
         x.extend(pawns)
         x.extend(knights)
-        #x.extend(bishops)
-        #x.extend(rooks)
-        #x.extend(queens)
-        #x.extend(kings)
+        x.extend(bishops)
+        x.extend(rooks)
+        x.extend(queens)
+        x.extend(kings)
 
         X.append(x)
         Y.append(y)
@@ -103,7 +105,6 @@ def get_model():
     l = tf.keras.layers
     model = tf.keras.models.Sequential([
         l.Dense(64, activation='relu'),
-        l.Dense(64, activation='relu'),
         #l.Dense(100, activation='relu'),
         #l.Dense(100, activation='relu'),
         #l.Dropout(0.2),
@@ -119,7 +120,13 @@ if __name__ == '__main__':
     X,Y = get_training_data(fens)
     X_train, X_test, Y_train, Y_test = train_test_split(X,Y)
 
+    early_stopping = tf.keras.callbacks.EarlyStopping(
+        monitor='val_loss', min_delta=0, patience=0, verbose=0, mode='auto',
+        baseline=None, restore_best_weights=False
+    )
+
     model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mse', 'mae'])
-    model.fit(X_train,Y_train, epochs=50, validation_data=(X_test, Y_test), validation_freq=10)
+    model.fit(X_train,Y_train, epochs=150, validation_data=(X_test, Y_test),
+              validation_freq=1, callbacks=[early_stopping])
 
     pdb.set_trace()
