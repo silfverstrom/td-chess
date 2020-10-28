@@ -7,7 +7,6 @@ import chess.pgn
 import pdb
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
-
 def evaluate(board):
     wp = len(board.pieces(chess.PAWN, chess.WHITE))
     bp = len(board.pieces(chess.PAWN, chess.BLACK))
@@ -88,11 +87,14 @@ def get_training_data(fens):
     return X,Y
 
 def get_fens():
+    with open('fens.npy', 'rb') as f:
+        return np.load(f)
+def save_fens():
     pgn = open("/Users/silfverstrom/Workspace/link/projects/chess_engine/data/lichess_db_standard_rated_2014-08.pgn")
 
     fens = []
     count = 0
-    while count < 300:
+    while count < 500:
         game = chess.pgn.read_game(pgn)
         board = chess.Board()
         for move in game.mainline_moves():
@@ -100,33 +102,57 @@ def get_fens():
             fen = board.fen()
             fens.append(fen)
         count = count + 1
-    return fens
+
+    fens = np.array(fens)
+    with open('fens.npy', 'wb') as f:
+        np.save(f, fens)
+    print('Fens saved')
 def get_model():
     l = tf.keras.layers
     model = tf.keras.models.Sequential([
-        l.Dense(64, activation='relu'),
-        #l.Dense(100, activation='relu'),
+        l.Dense(64),
         #l.Dense(100, activation='relu'),
         #l.Dropout(0.2),
         l.Dense(1, activation='linear'),
     ])
     return model
 
-if __name__ == '__main__':
-    #fen = "r1b1r1k1/ppp3pp/5b2/5p2/2P5/1P2p1PP/P2NPRB1/5RK1 w - - 0 25"
+def generate_data():
     fens = get_fens()
 
-    model = get_model()
     X,Y = get_training_data(fens)
+
+    with open('data.npy', 'wb') as f:
+        np.savez(f, X=X, Y=Y)
+if __name__ == '__main__':
+    #fen = "r1b1r1k1/ppp3pp/5b2/5p2/2P5/1P2p1PP/P2NPRB1/5RK1 w - - 0 25"
+    #save_fens()
+
+
+    #generate_data()
+    X = None
+    Y = None
+    with open('data.npy', 'rb') as f:
+        data = np.load(f)
+        X = data['X']
+        Y = data['Y']
     X_train, X_test, Y_train, Y_test = train_test_split(X,Y)
+
+    # Normalize values
+    #pdb.set_trace()
+    #Y_train = tf.keras.utils.normalize(Y_train, axis=0)[0]
+    #Y_test = tf.keras.utils.normalize(Y_test, axis=0)[0]
 
     early_stopping = tf.keras.callbacks.EarlyStopping(
         monitor='val_loss', min_delta=0, patience=0, verbose=0, mode='auto',
         baseline=None, restore_best_weights=False
     )
 
+
+    model = get_model()
+
     model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mse', 'mae'])
     model.fit(X_train,Y_train, epochs=150, validation_data=(X_test, Y_test),
-              validation_freq=1, callbacks=[early_stopping])
+              batch_size=32, validation_freq=1, callbacks=[early_stopping])
 
     pdb.set_trace()
