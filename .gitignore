@@ -1,1 +1,4 @@
 *.npy
+tdchess.egg-info/*
+tdchess/__pycache__/*
+output/*

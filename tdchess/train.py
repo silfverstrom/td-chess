@@ -1,4 +1,4 @@
-from tables import pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable
+from tdchess.tables import pawntable, knightstable, bishopstable, rookstable, queenstable, kingstable
 import chess
 import chess.engine
 import numpy as np
@@ -43,8 +43,8 @@ def evaluate(board):
     kingsq = kingsq + sum([-kingstable[chess.square_mirror(i)]
                                     for i in board.pieces(chess.KING, chess.BLACK)])
 
-    #material = material + pawnsq + knightsq + bishopsq+ rooksq+ queensq + kingsq
-    material = pawnsq + knightsq + bishopsq+ rooksq+ queensq + kingsq
+    material = material + pawnsq + knightsq + bishopsq+ rooksq+ queensq + kingsq
+    #material = pawnsq + knightsq + bishopsq+ rooksq+ queensq + kingsq
     return material
 
 def get_bitboard(board, piece_type):
