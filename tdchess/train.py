@@ -7,6 +7,17 @@ import chess.pgn
 import pdb
 import tensorflow as tf
 from sklearn.model_selection import train_test_split
+path = "/usr/local/Cellar/stockfish/12/bin/stockfish"
+engine = chess.engine.SimpleEngine.popen_uci(path)
+chess.engine.Limit(depth=0)
+
+def evaluate_stockfish(board):
+    ev = engine.analyse(board, chess.engine.Limit(depth=0))
+    try:
+        y = float(str(ev['score'].white()))
+    except:
+        y = float(str(ev['score'].white())[1:])*1000
+    return y
 def evaluate(board):
     wp = len(board.pieces(chess.PAWN, chess.WHITE))
     bp = len(board.pieces(chess.PAWN, chess.BLACK))
@@ -45,6 +56,7 @@ def evaluate(board):
 
     material = material + pawnsq + knightsq + bishopsq+ rooksq+ queensq + kingsq
     #material = pawnsq + knightsq + bishopsq+ rooksq+ queensq + kingsq
+
     return material
 
 def get_bitboard(board, piece_type):
@@ -59,27 +71,60 @@ def get_bitboard(board, piece_type):
 
     return pieces
 
-def get_training_data(fens):
+def get_training_data(fens, stockfish=False):
     X = []
     Y = []
     for fen in fens:
         board = chess.Board(fen)
-        y = evaluate(board)
+        if stockfish:
+            y = evaluate_stockfish(board)
+        else:
+            y = evaluate(board)
+
+        #pawns = get_bitboard(board, chess.PAWN)
+        #knights = get_bitboard(board, chess.KNIGHT)
+        #bishops = get_bitboard(board, chess.BISHOP)
+        #rooks = get_bitboard(board, chess.ROOK)
+        #queens = get_bitboard(board, chess.QUEEN)
+        #kings = get_bitboard(board, chess.KING)
+
 
         x = []
-        pawns = get_bitboard(board, chess.PAWN)
-        knights = get_bitboard(board, chess.KNIGHT)
-        bishops = get_bitboard(board, chess.BISHOP)
-        rooks = get_bitboard(board, chess.ROOK)
-        queens = get_bitboard(board, chess.QUEEN)
-        kings = get_bitboard(board, chess.KING)
+        # add meta
+        tt = [1,0] if board.turn else [0,1]
+        meta = tt
+        piece_map = board.piece_map()
+        empty = [0 for _ in range(12)]
+        pieces = ['p','n','b','r','q','k','P','N','B','R','Q','K']
 
-        x.extend(pawns)
-        x.extend(knights)
-        x.extend(bishops)
-        x.extend(rooks)
-        x.extend(queens)
-        x.extend(kings)
+        rep = [empty.copy() for _ in range(8*8)]
+
+        for key in piece_map:
+            val = str(piece_map[key])
+            ind = pieces.index(val)
+
+            label = None
+            if ind <= 5 and not board.turn: #black piece, black to move
+                label = 1
+            if ind <= 5 and board.turn: #black piece, white to move
+                label = -1
+
+            if ind > 5 and board.turn: #white piece, white to move
+                label = 1
+            if ind > 5 and not board.turn: #black piece, black to move
+                label = -1
+
+            rep[key][ind] = label
+        rep = np.array(rep).flatten()
+        # add bitboards
+        #x.extend(meta)
+        #x.extend(pawns)
+        #x.extend(knights)
+        #x.extend(bishops)
+        #x.extend(rooks)
+        #x.extend(queens)
+        #x.extend(kings)
+        x.extend(rep)
 
         X.append(x)
         Y.append(y)
@@ -94,7 +139,8 @@ def save_fens():
 
     fens = []
     count = 0
-    while count < 500:
+    skip = 10000
+    while count < skip and count < 20000+skip:
         game = chess.pgn.read_game(pgn)
         board = chess.Board()
         for move in game.mainline_moves():
@@ -110,32 +156,48 @@ def save_fens():
 def get_model():
     l = tf.keras.layers
     model = tf.keras.models.Sequential([
-        l.Dense(64),
-        #l.Dense(100, activation='relu'),
-        #l.Dropout(0.2),
+        l.Dense(2048, activation='relu'),
+        l.BatchNormalization(),
+        l.Dense(2048, activation='relu'),
+        l.BatchNormalization(),
+        l.Dense(2048, activation='relu'),
+        l.BatchNormalization(),
+        #l.Dropout(0.5),
         l.Dense(1, activation='linear'),
     ])
     return model
 
-def generate_data():
+def generate_data(stockfish = False):
     fens = get_fens()
+    X,Y = get_training_data(fens, stockfish)
 
-    X,Y = get_training_data(fens)
-
-    with open('data.npy', 'wb') as f:
-        np.savez(f, X=X, Y=Y)
+    if stockfish:
+        with open('stockfish.npy', 'wb') as f:
+            np.savez(f, X=X, Y=Y)
+    else:
+        with open('data.npy', 'wb') as f:
+            np.savez(f, X=X, Y=Y)
 if __name__ == '__main__':
     #fen = "r1b1r1k1/ppp3pp/5b2/5p2/2P5/1P2p1PP/P2NPRB1/5RK1 w - - 0 25"
     #save_fens()
 
 
-    #generate_data()
+    stockfish = True
+    generate_data(stockfish)
     X = None
     Y = None
-    with open('data.npy', 'rb') as f:
-        data = np.load(f)
-        X = data['X']
-        Y = data['Y']
+    if stockfish:
+        print('Using stockfish')
+        with open('stockfish.npy', 'rb') as f:
+            data = np.load(f)
+            X = data['X']
+            Y = data['Y']
+    else:
+        with open('data.npy', 'rb') as f:
+            data = np.load(f)
+            X = data['X']
+            Y = data['Y']
+
     X_train, X_test, Y_train, Y_test = train_test_split(X,Y)
 
     # Normalize values
@@ -143,16 +205,36 @@ if __name__ == '__main__':
     #Y_train = tf.keras.utils.normalize(Y_train, axis=0)[0]
     #Y_test = tf.keras.utils.normalize(Y_test, axis=0)[0]
 
+
+    optimizer = tf.keras.optimizers.SGD(
+        learning_rate=0.001, momentum=0.7, nesterov=True
+        #learning_rate=0.01, momentum=0.7, nesterov=True
+    )
+    if stockfish:
+        #model = tf.keras.models.load_model('output/v1')
+        model = get_model()
+        model.compile(optimizer=optimizer, loss='mae', metrics=['mae'])
+    else:
+        model = get_model()
+        model.compile(optimizer=optimizer, loss='mae', metrics=['mae'])
+
+    EPOCHS = 10
+
+    checkpoint_filepath = '/tmp/checkpoint'
+
     early_stopping = tf.keras.callbacks.EarlyStopping(
-        monitor='val_loss', min_delta=0, patience=0, verbose=0, mode='auto',
+        monitor='val_loss', min_delta=0, patience=5, verbose=0, mode='auto',
         baseline=None, restore_best_weights=False
     )
+    model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
+        filepath=checkpoint_filepath,
+        save_weights_only=False,
+        monitor='val_loss',
+        mode='min',
+        save_best_only=True
+    )
 
-
-    model = get_model()
-
-    model.compile(optimizer='adam', loss='mean_squared_error', metrics=['mse', 'mae'])
-    model.fit(X_train,Y_train, epochs=150, validation_data=(X_test, Y_test),
-              batch_size=32, validation_freq=1, callbacks=[early_stopping])
+    model.fit(X_train,Y_train, epochs=200, validation_data=(X_test, Y_test),
+              batch_size=256, validation_freq=1, callbacks=[early_stopping, model_checkpoint_callback])
 
     pdb.set_trace()

@@ -2,3 +2,5 @@
 tdchess.egg-info/*
 tdchess/__pycache__/*
 output/*
+.ipynb_checkpoints/*
+*.tar.gz
