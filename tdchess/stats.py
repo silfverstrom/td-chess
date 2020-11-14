@@ -30,15 +30,24 @@ if __name__ == '__main__':
         if not line:
             break
 
-        Y.append(float(line))
+        line = line.split(',')
+        val = float(line[1])
+        # artificial
+        mx = 2000
+        mi = -2000
+        #normalise
+        if val > mx or val < mi:
+            continue
+        Y.append(val)
 
     fr.close()
 
 
-    Y = list(filter(lambda y: y >= -2000 and y <= 2000, Y))
+    #Y = list(filter(lambda y: y >= -2000 and y <= 2000, Y))
     print("Normalising")
     mi = min(Y)
     mx = max(Y)
+    print("len", len(Y))
     print("Max", mx)
     print("min", mi)
     mean = np.mean(Y)
@@ -46,9 +55,16 @@ if __name__ == '__main__':
     print('mean', mean)
     print('std', std)
 
-    Y_ = scipy.stats.zscore(Y)
-
+    Y_ = normalise(Y)
     print(Y[0:100])
+
     print(Y_[0:100])
-    print(np.mean(Y_))
+
+    print("mean normalised", np.mean(Y_))
+    print("std normalised", np.std(Y_))
+
+    #Y_ = scipy.stats.zscore(Y)
+    #print(Y[0:100])
+    #print(Y_[0:100])
+    #print(np.mean(Y_))
 
