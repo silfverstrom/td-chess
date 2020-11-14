@@ -6,3 +6,10 @@ output/*
 *.tar.gz
 data/*
 .DS_STORE
+
+tdchess/data/*
+tdchess/out/*
+tdchess/output/*
+tdchess/__pycache__/*
+tdchess/*.npy
+*.npy
