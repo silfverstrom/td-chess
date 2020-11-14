@@ -4,3 +4,10 @@ tdchess/__pycache__/*
 output/*
 .ipynb_checkpoints/*
 *.tar.gz
+
+tdchess/data/*
+tdchess/out/*
+tdchess/output/*
+tdchess/__pycache__/*
+tdchess/*.npy
+*.npy
