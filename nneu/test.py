@@ -100,3 +100,6 @@ if __name__ == '__main__':
     print(res)
 
     print(predict('rnb1kbnr/ppp1pp1p/3p3p/8/3PP1q1/8/PPP2PPP/RN2KBNR w KQkq - 0 5'))
+
+
+    print(model.summary())

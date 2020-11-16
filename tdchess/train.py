@@ -5,16 +5,16 @@ import chess.pgn
 
 import pdb
 import tensorflow as tf
-from sklearn.model_selection import train_test_split
 from training_data import get_training_data
 
-#path = "/usr/local/Cellar/stockfish/12/bin/stockfish"
-#engine = chess.engine.SimpleEngine.popen_uci(path)
-#chess.engine.Limit(depth=0)
+path = "/usr/local/Cellar/stockfish/12/bin/stockfish"
+engine = chess.engine.SimpleEngine.popen_uci(path)
+chess.engine.Limit(depth=4)
 
-DB_PATH = '/home/niklas/workspace/td-chess/tdchess/data_100k.csv'
-DB_PATH_TEST = '/home/niklas/workspace/td-chess/tdchess/data_100k_test.csv'
-DB_LENGTH = 6991225
+DB_PATH = '/Users/silfverstrom/Documents/data/chess/tuner/quiet-labeled.epd'
+#DB_PATH_TEST = '/home/niklas/workspace/td-chess/tdchess/data_100k_test.csv'
+#DB_PATH_TEST = '/home/niklas/workspace/td-chess/tdchess/data_100k_test.csv'
+DB_LENGTH = 750e3
 BATCH_SIZE = 256
 checkpoint_filepath = '/tmp/tdchess_checkpoint/'
 
@@ -31,40 +31,27 @@ def get_model():
         l.Dense(1, activation='linear'),
     ])
     return model
+
 def gen(path, batch_size=256):
     f = open(path)
     while True:
-        batch_x = []
-        batch_y = []
-        for _ in range(batch_size):
-            line = f.readline().strip()
-            if not line:
-                f.seek(0)
-                break
-            data = line.split(',')
-            fen = data[0]
-            y = float(data[1])
+        line = f.readline()
 
-            # real max min
-            #mx = 11254.0
-            #mi = -10479.0
+        if not line:
+            f.seek(0)
 
-            # artificial
-            mx = 2000
-            mi = -2000
-            #normalise
-            if y > mx or y < mi:
-                continue
+        board = chess.Board().from_epd(line)[0]
 
-            d = mx - mi
-            if d == 0:
-                d = 1
-            y = (y - mi) / d
+        ev = engine.analyse(board, chess.engine.Limit(depth=0))
+        try:
+            y = float(str(ev['score'].white()))
+            y = y / 100
+        except Exception as e:
+            continue
 
-            x = get_training_data(chess.Board(fen))
-            batch_x.append(x)
-            batch_y.append(y)
-        yield np.array(batch_x), np.array(batch_y)
+        x = get_training_data(board)
+
+        yield (x), y
 
 
 if __name__ == '__main__':
@@ -86,8 +73,23 @@ if __name__ == '__main__':
         save_best_only=True
     )
 
+    train_dataset = tf.data.Dataset.from_generator(
+        gen,
+        args=[DB_PATH],
+        #output_signature=((tf.TensorSpec(()), tf.SparseTensorSpec(())), tf.TensorSpec(()))
+        output_signature=((tf.TensorSpec(789,)), tf.TensorSpec(None))
+    )
+    print("HEJ", train_dataset.take(1))
+
     steps = round(DB_LENGTH / BATCH_SIZE)
 
-    model.fit(gen(DB_PATH), epochs=100, validation_data=gen(DB_PATH_TEST), steps_per_epoch=steps, validation_freq=1, callbacks=[early_stopping, model_checkpoint_callback])
+    model.fit(
+        train_dataset.batch(BATCH_SIZE),
+        epochs=1,
+        #validation_data=gen(DB_PATH_TEST),
+        steps_per_epoch=steps,
+        validation_freq=1,
+        callbacks=[early_stopping, model_checkpoint_callback]
+    )
 
     pdb.set_trace()

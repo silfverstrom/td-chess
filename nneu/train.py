@@ -81,7 +81,10 @@ def gen(path, batch_size=256):
         try:
             X = get_halfkp_indeces(board)
             #yield (X[0], X[1]), y
-            yield (X[0], X[1]), eval
+            if len(X) == 2:
+                yield (X[0], X[1]), eval
+            else:
+                continue
         except:
             continue
 
@@ -115,10 +118,10 @@ def train():
     optimizer = tf.keras.optimizers.Adam()
     model.compile(optimizer=optimizer, loss='mse', metrics=['mae'])
     model.fit(
-        train_dataset.batch(256),
+        train_dataset.batch(512),
         validation_data=test_dataset.batch(100),
         epochs=10,
-        steps_per_epoch=4000,
+        steps_per_epoch=13000,
         validation_steps=400,
         callbacks = [early_stopping, model_checkpoint_callback]
     )
