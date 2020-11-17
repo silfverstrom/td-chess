@@ -10,6 +10,7 @@ import tensorflow as tf
 from training_data import get_training_data
 import datetime
 import configparser
+import random
 
 def get_model():
     l = tf.keras.layers
@@ -44,6 +45,17 @@ def get_generator(engine):
                 break
             try:
                 board = chess.Board().from_epd(line)[0]
+                moves = list(board.legal_moves)
+                for i in range(2):
+                    move = random.choice(moves)
+                    board.push(move)
+                    ev = engine.analyse(board, chess.engine.Limit(depth=0))
+                    y = float(str(ev['score'].white()))
+                    y = y / 100
+                    x, x1 = get_training_data(board)
+                    board.pop()
+                    yield (x, x1), y
+
                 ev = engine.analyse(board, chess.engine.Limit(depth=0))
                 y = float(str(ev['score'].white()))
                 y = y / 100
