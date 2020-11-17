@@ -2,59 +2,85 @@ import chess
 import chess.engine
 import numpy as np
 import chess.pgn
+import os
+import sys
 
 import pdb
 import tensorflow as tf
 from training_data import get_training_data
-
-path = "/usr/local/Cellar/stockfish/12/bin/stockfish"
-engine = chess.engine.SimpleEngine.popen_uci(path)
-chess.engine.Limit(depth=4)
-
-DB_PATH = '/Users/silfverstrom/Documents/data/chess/tuner/quiet-labeled.epd'
-#DB_PATH_TEST = '/home/niklas/workspace/td-chess/tdchess/data_100k_test.csv'
-#DB_PATH_TEST = '/home/niklas/workspace/td-chess/tdchess/data_100k_test.csv'
-DB_LENGTH = 750e3
-BATCH_SIZE = 256
-checkpoint_filepath = '/tmp/tdchess_checkpoint/'
+import datetime
+import configparser
 
 def get_model():
     l = tf.keras.layers
-    model = tf.keras.models.Sequential([
-        l.Dense(2048, activation='relu'),
-        l.BatchNormalization(),
-        l.Dense(2048, activation='relu'),
-        l.BatchNormalization(),
-        l.Dense(2048, activation='relu'),
-        l.BatchNormalization(),
-        l.Dropout(0.5),
-        l.Dense(1, activation='linear'),
-    ])
+
+    input1 = l.Input(shape=(774))
+    x1 = l.Dense(2048, activation='relu')(input1)
+    x1 = l.BatchNormalization()(x1)
+    x1 = l.Dense(2048, activation='relu')(x1)
+    x1 = l.BatchNormalization()(x1)
+    x1 = l.Dense(2048, activation='relu')(x1)
+
+    input2 = l.Input(shape=(15))
+    x2 = l.Dense(2048, activation='relu')(input2)
+
+    x = l.Concatenate()([x1, x2])
+    x = l.Dense(2048)(x)
+    #x = l.Dropout(0.5)(x)
+
+    output =l.Dense(1, activation='linear')(x)
+
+    model = tf.keras.Model(inputs=[input1, input2], outputs=output)
+
     return model
 
-def gen(path, batch_size=256):
-    f = open(path)
-    while True:
-        line = f.readline()
+def get_generator(engine):
+    def gen(path):
+        f = open(path)
+        while True:
+            line = f.readline()
 
-        if not line:
-            f.seek(0)
+            if not line:
+                break
 
-        board = chess.Board().from_epd(line)[0]
+            try:
+                board = chess.Board().from_epd(line)[0]
+                ev = engine.analyse(board, chess.engine.Limit(depth=0))
+                y = float(str(ev['score'].white()))
+                y = y / 100
+            except Exception as e:
+                continue
 
-        ev = engine.analyse(board, chess.engine.Limit(depth=0))
-        try:
-            y = float(str(ev['score'].white()))
-            y = y / 100
-        except Exception as e:
-            continue
+            x, x1 = get_training_data(board)
 
-        x = get_training_data(board)
-
-        yield (x), y
+            yield (x, x1), y
+    return gen
 
 
 if __name__ == '__main__':
+    if len(sys.argv) < 2:
+        print('Must be run with args')
+        sys.exit()
+    config_path = sys.argv[1]
+
+
+    config = configparser.ConfigParser()
+    config.read(config_path)
+    config = dict(config['DEFAULT'])
+    print(config)
+
+    DB_PATH = config['db_path']
+    DB_TEST_PATH = config['db_test_path']
+    DB_LENGTH = int(config['db_length'])
+    BATCH_SIZE = int(config['batch_size'])
+    checkpoint_filepath = config['checkpoint_filepath'] + 'model.{epoch:02d}-{val_loss:.2f}'
+    EPOCHS = int(config['epochs'])
+    log_dir = config['log_dir'] + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+
+
+    path = config['stockfish_path']
+    engine = chess.engine.SimpleEngine.popen_uci(path)
+    chess.engine.Limit(depth=config['stockfish_depth'])
 
     model = get_model()
     optimizer = tf.keras.optimizers.Adam()
@@ -68,28 +94,37 @@ if __name__ == '__main__':
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_filepath,
         save_weights_only=False,
-        monitor='val_loss',
-        mode='min',
-        save_best_only=True
+        save_freq='epoch',
+        period=1,
+        save_best_only=False
     )
+    tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
+    gen = get_generator(engine)
     train_dataset = tf.data.Dataset.from_generator(
         gen,
         args=[DB_PATH],
-        #output_signature=((tf.TensorSpec(()), tf.SparseTensorSpec(())), tf.TensorSpec(()))
-        output_signature=((tf.TensorSpec(789,)), tf.TensorSpec(None))
+        output_signature=((tf.TensorSpec(774,), tf.TensorSpec(15)), tf.TensorSpec(None))
     )
-    print("HEJ", train_dataset.take(1))
+    test_dataset = tf.data.Dataset.from_generator(
+        gen,
+        args=[DB_TEST_PATH],
+        output_signature=((tf.TensorSpec(774,), tf.TensorSpec(15)), tf.TensorSpec(None))
+    )
+    print(model.summary())
 
     steps = round(DB_LENGTH / BATCH_SIZE)
 
+    train_dataset = train_dataset.repeat(EPOCHS)
+
+
     model.fit(
         train_dataset.batch(BATCH_SIZE),
-        epochs=1,
-        #validation_data=gen(DB_PATH_TEST),
+        epochs=EPOCHS,
+        validation_data=test_dataset.batch(15),
         steps_per_epoch=steps,
         validation_freq=1,
-        callbacks=[early_stopping, model_checkpoint_callback]
+        callbacks=[early_stopping, model_checkpoint_callback, tensorboard_callback]
     )
 
     pdb.set_trace()

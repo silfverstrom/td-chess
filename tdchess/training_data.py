@@ -74,10 +74,10 @@ def get_training_data(board):
     pieces = normalise(pieces)
     diff = [wp - bp, wn - bn, wb - bb, wr - br, wq - bq]
     diff = normalise(diff)
-    x.extend(pieces)
-    x.extend(diff)
+    x1 = pieces
+    x1.extend(diff)
 
-    return x
+    return x, x1
 
 
 if __name__ == '__main__':
