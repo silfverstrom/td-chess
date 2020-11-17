@@ -40,7 +40,7 @@ def build_output_layer(inputs):
   output_layer = l.Dense(1, name='output_layer')
   return output_layer(inputs)
 
-def get_generator(engine):
+def get_generator(engine, config):
     def gen(path):
         f = open(path)
         while True:
@@ -51,7 +51,7 @@ def get_generator(engine):
             try:
                 board = chess.Board().from_epd(line)[0]
 
-                ev = engine.analyse(board, chess.engine.Limit(depth=0))
+                ev = engine.analyse(board, chess.engine.Limit(depth=config['stockfish_depth']))
                 y = float(str(ev['score'].white()))
                 y = y / 100
                 X = get_halfkp_indeces(board)
@@ -114,7 +114,7 @@ if __name__ == '__main__':
     )
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-    gen = get_generator(engine)
+    gen = get_generator(engine, config)
     train_dataset = tf.data.Dataset.from_generator(
         gen,
         args=[DB_PATH],

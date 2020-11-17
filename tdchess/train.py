@@ -35,7 +35,7 @@ def get_model():
 
     return model
 
-def get_generator(engine):
+def get_generator(engine, config):
     def gen(path):
         f = open(path)
         while True:
@@ -49,14 +49,14 @@ def get_generator(engine):
                 for i in range(2):
                     move = random.choice(moves)
                     board.push(move)
-                    ev = engine.analyse(board, chess.engine.Limit(depth=0))
+                    ev = engine.analyse(board, chess.engine.Limit(depth=config['stockfish_depth']))
                     y = float(str(ev['score'].white()))
                     y = y / 100
                     x, x1 = get_training_data(board)
                     board.pop()
                     yield (x, x1), y
 
-                ev = engine.analyse(board, chess.engine.Limit(depth=0))
+                ev = engine.analyse(board, chess.engine.Limit(depth=config['stockfish_depth']))
                 y = float(str(ev['score'].white()))
                 y = y / 100
             except Exception as e:
@@ -111,7 +111,7 @@ if __name__ == '__main__':
     )
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-    gen = get_generator(engine)
+    gen = get_generator(engine, config)
     train_dataset = tf.data.Dataset.from_generator(
         gen,
         args=[DB_PATH],
