@@ -42,7 +42,6 @@ def get_generator(engine):
 
             if not line:
                 break
-
             try:
                 board = chess.Board().from_epd(line)[0]
                 ev = engine.analyse(board, chess.engine.Limit(depth=0))
