@@ -27,7 +27,7 @@ def get_model():
 
     x = l.Concatenate()([x1, x2])
     x = l.Dense(2048)(x)
-    #x = l.Dropout(0.5)(x)
+    x = l.Dropout(0.5)(x)
 
     output =l.Dense(1, activation='linear')(x)
 
