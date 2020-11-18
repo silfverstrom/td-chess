@@ -92,10 +92,12 @@ if __name__ == '__main__':
     )
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_filepath,
-        save_weights_only=True,
+        save_weights_only=False,
         save_freq='epoch',
         period=1,
-        save_best_only=False
+        save_best_only=True,
+        monitor='val_loss',
+        mode='min'
     )
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
