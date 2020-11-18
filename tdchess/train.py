@@ -92,7 +92,7 @@ if __name__ == '__main__':
     )
     model_checkpoint_callback = tf.keras.callbacks.ModelCheckpoint(
         filepath=checkpoint_filepath,
-        save_weights_only=False,
+        save_weights_only=True,
         save_freq='epoch',
         period=1,
         save_best_only=False
