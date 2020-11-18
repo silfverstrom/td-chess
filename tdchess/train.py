@@ -40,29 +40,17 @@ def get_generator(engine, config):
         f = open(path)
         while True:
             line = f.readline()
-
             if not line:
                 break
-            try:
-                board = chess.Board().from_epd(line)[0]
-                moves = list(board.legal_moves)
-                for i in range(2):
-                    move = random.choice(moves)
-                    board.push(move)
-                    ev = engine.analyse(board, chess.engine.Limit(depth=config['stockfish_depth']))
-                    y = float(str(ev['score'].white()))
-                    y = y / 100
-                    x, x1 = get_training_data(board)
-                    board.pop()
-                    yield (x, x1), y
 
-                ev = engine.analyse(board, chess.engine.Limit(depth=config['stockfish_depth']))
-                y = float(str(ev['score'].white()))
-                y = y / 100
+            split = line.split(',')
+            epd_line = split[0]
+            y = float(split[1]) / 100
+            try:
+                board = chess.Board().from_epd(epd_line)[0]
+                x, x1 = get_training_data(board)
             except Exception as e:
                 continue
-
-            x, x1 = get_training_data(board)
 
             yield (x, x1), y
     return gen

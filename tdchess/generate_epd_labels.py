@@ -22,26 +22,24 @@ chess.engine.Limit(depth=0)
 
 X = []
 Y = []
-xf = open('data/lichess_x.csv', 'w')
-yf = open('data/lichess_y.csv', 'w')
-fens = np.load('data/ccrl/fens_lichess_v1.npy')
-print('Starting', len(fens))
-for i, fen in enumerate(fens):
 
-    board = chess.Board(fen)
+f = open('/Users/silfverstrom/Documents/data/chess/tuner/quiet-labeled.epd', 'r')
+fw = open('/Users/silfverstrom/Documents/data/chess/tuner/quiet-labeled_stockfish_depth0.epd', 'w')
+
+i = 0
+while True:
+    line = f.readline().strip()
+    if not line:
+        break
+    board = chess.Board().from_epd(line)[0]
     ev = engine.analyse(board, chess.engine.Limit(depth=0))
 
-    fen = board.fen()
-    x = get_training_data(board)
     try:
         y = float(str(ev['score'].white()))
+        out = "{},{}\n".format(line, y)
+        fw.write(out)
+        i = i + 1
+        if i % 1000 == 0:
+            print("step ", i)
     except Exception as e:
         continue
-
-    xf.write(",".join([str(xi) for xi in x])+'\n')
-    yf.write(str(y)+'\n');
-    #X.append(x)
-    #Y.append(y)
-
-    if i % 1000 == 0:
-        print("Step {}".format(i))
