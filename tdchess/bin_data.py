@@ -191,4 +191,5 @@ class NNUEBinData():
 
 if __name__ == '__main__':
     bin_data = NNUEBinData(sys.argv[1])
-    print(bin_data.get_raw(20))
+    for i in bin_data:
+        print(i)

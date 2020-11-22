@@ -12,11 +12,13 @@ import datetime
 import configparser
 import random
 
+from bin_data import NNUEBinData
+
 def get_model():
     l = tf.keras.layers
 
     input1 = l.Input(shape=(774))
-    x1 = l.Dense(2048, use_bias=False)(input1)
+    x1 = l.Dense(128, use_bias=False)(input1)
     x1 = l.BatchNormalization()(x1)
     x1 = l.ReLU()(x1)
     x1 = l.Dense(64, use_bias=False)(x1)
@@ -40,19 +42,17 @@ def get_model():
 
     return model
 
-def get_generator(engine, config):
+def get_generator(config):
     def gen(path):
-        f = open(path)
-        while True:
-            line = f.readline()
-            if not line:
-                break
+        bin_generator = NNUEBinData(path)
+        for data in bin_generator:
 
-            split = line.split(',')
-            epd_line = split[0]
-            y = float(split[1]) / 100
+            board = data[0]
+            move = data[1]
+            result = data[2]
+            score = data[3]
+            y = float(score) / 100
             try:
-                board = chess.Board().from_epd(epd_line)[0]
                 x, x1 = get_training_data(board)
             except Exception as e:
                 continue
@@ -81,11 +81,6 @@ if __name__ == '__main__':
     EPOCHS = int(config['epochs'])
     log_dir = config['log_dir'] + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
-
-    path = config['stockfish_path']
-    engine = chess.engine.SimpleEngine.popen_uci(path)
-    chess.engine.Limit(depth=config['stockfish_depth'])
-
     model = get_model()
     optimizer = tf.keras.optimizers.Adam()
 
@@ -106,7 +101,7 @@ if __name__ == '__main__':
     )
     tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
-    gen = get_generator(engine, config)
+    gen = get_generator(config)
     train_dataset = tf.data.Dataset.from_generator(
         gen,
         args=[DB_PATH],
