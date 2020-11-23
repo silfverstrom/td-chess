@@ -17,8 +17,8 @@ FEATURE_TRANSFORM = 256
 def get_model():
     l = tf.keras.layers
 
-    input_player = l.Input(shape=(768))
-    input_opp = l.Input(shape=(768))
+    input_player = l.Input(shape=(40960))
+    input_opp = l.Input(shape=(40960))
 
     x1 = l.Dense(FEATURE_TRANSFORM)(input_player)
     x1 = l.ReLU()(x1)

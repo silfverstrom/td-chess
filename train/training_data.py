@@ -2,7 +2,7 @@ import chess
 import chess.engine
 import numpy as np
 import chess.pgn
-
+import pdb
 
 def normalise(Y):
     mi = min(Y)
@@ -21,25 +21,33 @@ def get_training_data(board):
     ''' relative training data based on turn'''
     # add meta
     piece_map = board.piece_map()
-    empty = [0 for _ in range(12)]
-    pieces = ['p','n','b','r','q','k','P','N','B','R','Q','K']
+    #empty = [0 for _ in range(12)]
+    pieces = ['p','n','b','r','q','P','N','B','R','Q']
 
-    white = [empty.copy() for _ in range(8*8)]
-    black = [empty.copy() for _ in range(8*8)]
+    #white = [empty.copy() for _ in range(8*8)]
+    #black = [empty.copy() for _ in range(8*8)]
 
+    white = np.zeros((64,64,10))
+    black = np.zeros((64,64,10))
+
+    wki = board.pieces(chess.KING, chess.WHITE).pop()
+    bki = board.pieces(chess.KING, chess.BLACK).pop()
 
     for key in piece_map:
         val = str(piece_map[key])
-        ind = pieces.index(val)
+        try:
+            ind = pieces.index(val)
+        except:
+            continue # kings
 
         label = None
         if ind > 5:
-            white[key][ind] = 1
+            white[wki][key][ind] = 1
         elif ind <= 5:
-            black[key][ind] = 1
+            black[bki][key][ind] = 1
 
-    white = np.array(white).flatten()
-    black = np.array(black).flatten()
+    white = white.flatten()
+    black = black.flatten()
 
     wp = len(board.pieces(chess.PAWN, chess.WHITE))
     bp = len(board.pieces(chess.PAWN, chess.BLACK))
@@ -74,6 +82,7 @@ def get_training_data(board):
     if board.has_queenside_castling_rights(chess.BLACK):
         castle_rights[3] = 1
     meta.extend(castle_rights)
+    meta = np.array(meta)
 
     if board.turn:
         return white, black, meta
@@ -82,4 +91,6 @@ def get_training_data(board):
 
 
 if __name__ == '__main__':
-    print(get_training_data(chess.Board()))
+    out = get_training_data(chess.Board())
+    print(out)
+    pdb.set_trace()

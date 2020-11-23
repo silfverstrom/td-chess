@@ -42,7 +42,8 @@ def get_dataset(db_path, batch_size=200):
     train_dataset = tf.data.Dataset.from_generator(
         gen,
         args=[db_path],
-        output_signature=((tf.TensorSpec(768,), tf.TensorSpec(768,), tf.TensorSpec(19)), tf.TensorSpec(None))
+        #output_signature=((tf.TensorSpec(768,), tf.TensorSpec(768,), tf.TensorSpec(19)), tf.TensorSpec(None))
+        output_signature=((tf.TensorSpec(40960,), tf.TensorSpec(40960,), tf.TensorSpec(19)), tf.TensorSpec(None))
         #output_signature=((tf.SparseTensorSpec((774,)), tf.SparseTensorSpec((15,))), tf.TensorSpec(None))
     )
 
