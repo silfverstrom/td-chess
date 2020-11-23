@@ -17,6 +17,14 @@ from bin_data import NNUEBinData
 from model import get_model
 from data_generator import get_dataset
 
+def logit(x):
+    return - tf.math.log(1. / x - 1.)
+def mae_scaled(y_true, y_pred):
+    # scale
+    y1 = logit(y_true)
+    y2 = logit(y_pred)
+
+    return tf.keras.losses.MAE(logit(y_true), logit(y_pred))
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
@@ -43,7 +51,7 @@ if __name__ == '__main__':
 
     optimizer = tf.keras.optimizers.Adam()
 
-    model.compile(optimizer=optimizer, loss='mae', metrics=['mae'])
+    model.compile(optimizer=optimizer, loss='mae', metrics=['mae', mae_scaled])
 
     early_stopping = tf.keras.callbacks.EarlyStopping(
         monitor='val_loss', min_delta=0, patience=5, verbose=0, mode='auto',
@@ -65,6 +73,11 @@ if __name__ == '__main__':
     steps = round(DB_LENGTH / BATCH_SIZE)
 
     train_dataset = train_dataset.repeat(EPOCHS)
+
+    test_dataset = test_dataset.take(10)
+
+    #model = tf.keras.models.load_model('/tmp/test')
+
 
     model.fit(
         train_dataset,

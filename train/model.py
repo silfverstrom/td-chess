@@ -44,6 +44,24 @@ def get_model():
 
     return model
 
+# experimetn
+def loss_fn(outcome, score, pred, lambda_):
+  q = pred
+  t = outcome
+  p = util.cp_conversion(score)
+  #print(t.size())
+  #print(p.size())
+  #print(pred.size())
+  epsilon = 1e-12
+  teacher_entropy = -(p * (p + epsilon).log() + (1.0 - p) * (1.0 - p + epsilon).log())
+  outcome_entropy = -(t * (t + epsilon).log() + (1.0 - t) * (1.0 - t + epsilon).log())
+
+  teacher_loss = -(p * F.logsigmoid(q) + (1.0 - p) * F.logsigmoid(-q))
+  outcome_loss = -(t * F.logsigmoid(q) + (1.0 - t) * F.logsigmoid(-q))
+  result  = lambda_ * teacher_loss    + (1.0 - lambda_) * outcome_loss
+  entropy = lambda_ * teacher_entropy + (1.0 - lambda_) * outcome_entropy
+  #print(result.size())
+  return result.mean() - entropy.mean()
 if __name__ == '__main__':
     model = get_model()
     print(model.summary())

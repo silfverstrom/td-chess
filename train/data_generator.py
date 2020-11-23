@@ -34,7 +34,11 @@ def mapper(X, y):
     x1 = X[0]
     x2 = X[1]
     x3 = X[2]
-    y = y / 100
+
+    print(y)
+
+    y = tf.math.sigmoid((y / 600))
+    #p = (score / 600.0).sigmoid()
 
     return (x1, x2, x3), y
 def get_dataset(db_path, batch_size=200):
@@ -65,6 +69,9 @@ def benchmark(dataset, num_epochs=2):
             pass
     tf.print("Execution time:", time.perf_counter() - start_time)
 
+def logit(x):
+    return - tf.math.log(1. / x - 1.)
+
 if __name__ == '__main__':
     if len(sys.argv) < 2:
         print('Must be run with args')
@@ -79,6 +86,11 @@ if __name__ == '__main__':
 
     train_dataset = get_dataset(DB_PATH)
 
-    benchmark(
-        train_dataset
-    )
+    for val in train_dataset.batch(1).take(100).as_numpy_iterator():
+        print(val[1].mean(), val[1].std(), logit(val[1].mean())*600)
+        pdb.set_trace()
+
+
+    #benchmark(
+    #    train_dataset
+    #)
