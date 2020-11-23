@@ -49,7 +49,6 @@ def get_dataset(db_path, batch_size=200):
     train_dataset = train_dataset.batch(batch_size)
     train_dataset = train_dataset.map(mapper)
     train_dataset = train_dataset.prefetch(batch_size*4)
-    train_dataset = train_dataset.cache()
 
     return train_dataset
 def benchmark(dataset, num_epochs=2):
