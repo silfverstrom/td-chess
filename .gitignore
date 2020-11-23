@@ -13,3 +13,5 @@ tdchess/output/*
 tdchess/__pycache__/*
 tdchess/*.npy
 *.npy
+train/logs/
+train/__pycache__/

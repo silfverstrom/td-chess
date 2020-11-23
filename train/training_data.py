@@ -16,47 +16,30 @@ def normalise(Y):
         Y_norm.append(y_)
     return Y_norm
 
-def get_training_data(board):
 
-    x = []
+def get_training_data(board):
+    ''' relative training data based on turn'''
     # add meta
-    tt = [1,0] if board.turn else [0,1]
     piece_map = board.piece_map()
     empty = [0 for _ in range(12)]
     pieces = ['p','n','b','r','q','k','P','N','B','R','Q','K']
 
-    rep = [empty.copy() for _ in range(8*8)]
+    white = [empty.copy() for _ in range(8*8)]
+    black = [empty.copy() for _ in range(8*8)]
 
-    castle_rights = [0,0,0,0]
-    if board.has_kingside_castling_rights(chess.WHITE):
-        castle_rights[0] = 1
-    if board.has_queenside_castling_rights(chess.WHITE):
-        castle_rights[1] = 1
-    if board.has_kingside_castling_rights(chess.BLACK):
-        castle_rights[2] = 1
-    if board.has_queenside_castling_rights(chess.BLACK):
-        castle_rights[3] = 1
 
     for key in piece_map:
         val = str(piece_map[key])
         ind = pieces.index(val)
 
         label = None
-        if ind <= 5 and not board.turn: #black piece, black to move
-            label = 1
-        if ind <= 5 and board.turn: #black piece, white to move
-            label = -1
+        if ind > 5:
+            white[key][ind] = 1
+        elif ind <= 5:
+            black[key][ind] = 1
 
-        if ind > 5 and board.turn: #white piece, white to move
-            label = 1
-        if ind > 5 and not board.turn: #black piece, black to move
-            label = -1
-
-        rep[key][ind] = label
-    rep = np.array(rep).flatten()
-    x.extend(rep)
-    x.extend(tt)
-    x.extend(castle_rights)
+    white = np.array(white).flatten()
+    black = np.array(black).flatten()
 
     wp = len(board.pieces(chess.PAWN, chess.WHITE))
     bp = len(board.pieces(chess.PAWN, chess.BLACK))
@@ -69,15 +52,33 @@ def get_training_data(board):
     wq = len(board.pieces(chess.QUEEN, chess.WHITE))
     bq = len(board.pieces(chess.QUEEN, chess.BLACK))
 
-    pieces = [wp, bp, wn, bn, wb, bb, wr, br, wq, bq]
+    if board.turn:
+        pieces = [wp, bp, wn, bn, wb, bb, wr, br, wq, bq]
+        diff = [wp - bp, wn - bn, wb - bb, wr - br, wq - bq]
+    else:
+        pieces = [bp, wp, bn, wn, bb, wb, br, wr, bq, wq]
+        diff = [bp - wp, bn - wn, bb - wb, br - wr, bq - wq]
 
     pieces = normalise(pieces)
-    diff = [wp - bp, wn - bn, wb - bb, wr - br, wq - bq]
     diff = normalise(diff)
-    x1 = pieces
-    x1.extend(diff)
+    meta = pieces
+    meta.extend(diff)
 
-    return x, x1
+    castle_rights = [0,0,0,0]
+    if board.has_kingside_castling_rights(chess.WHITE):
+        castle_rights[0] = 1
+    if board.has_queenside_castling_rights(chess.WHITE):
+        castle_rights[1] = 1
+    if board.has_kingside_castling_rights(chess.BLACK):
+        castle_rights[2] = 1
+    if board.has_queenside_castling_rights(chess.BLACK):
+        castle_rights[3] = 1
+    meta.extend(castle_rights)
+
+    if board.turn:
+        return white, black, meta
+    else:
+        return black, white, meta
 
 
 if __name__ == '__main__':
