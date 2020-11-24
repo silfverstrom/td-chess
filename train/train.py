@@ -18,13 +18,12 @@ from model import get_model
 from data_generator import get_dataset
 
 def logit(x):
-    return - tf.math.log(1. / x - 1.)
+    return - tf.math.log(1. / x - 1.) * 600
 def mae_scaled(y_true, y_pred):
     # scale
-    y1 = logit(y_true)
-    y2 = logit(y_pred)
-
-    return tf.keras.losses.MAE(logit(y_true), logit(y_pred))
+    y1 = tf.map_fn(lambda x: logit(x), y_true)
+    y2 = tf.map_fn(lambda x: logit(x), y_pred)
+    return tf.keras.losses.MAE(y1, y2)
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:

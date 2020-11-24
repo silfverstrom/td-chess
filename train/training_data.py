@@ -41,6 +41,7 @@ def get_training_data(board):
             continue # kings
 
         label = None
+        print(wki, key, ind)
         if ind > 5:
             white[wki][key][ind] = 1
         elif ind <= 5:
