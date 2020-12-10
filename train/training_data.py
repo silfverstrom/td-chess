@@ -41,7 +41,6 @@ def get_training_data(board):
             continue # kings
 
         label = None
-        print(wki, key, ind)
         if ind > 5:
             white[wki][key][ind] = 1
         elif ind <= 5:
@@ -82,13 +81,15 @@ def get_training_data(board):
         castle_rights[2] = 1
     if board.has_queenside_castling_rights(chess.BLACK):
         castle_rights[3] = 1
-    meta.extend(castle_rights)
-    meta = np.array(meta)
+    #meta.extend(castle_rights)
+    #meta = np.array(meta)
 
     if board.turn:
-        return white, black, meta
+        #return white, black, meta
+        return white, black
     else:
-        return black, white, meta
+        #return black, white, meta
+        return black, white
 
 
 if __name__ == '__main__':

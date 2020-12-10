@@ -50,7 +50,7 @@ if __name__ == '__main__':
 
     optimizer = tf.keras.optimizers.Adam()
 
-    model.compile(optimizer=optimizer, loss='mae', metrics=['mae', mae_scaled])
+    model.compile(optimizer=optimizer, loss='mae', metrics=['mae'])
 
     early_stopping = tf.keras.callbacks.EarlyStopping(
         monitor='val_loss', min_delta=0, patience=5, verbose=0, mode='auto',

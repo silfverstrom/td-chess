@@ -23,31 +23,32 @@ def get_generator():
             result = data[2]
             score = data[3]
             try:
-                x, x2, x3 = get_training_data(board)
+                #x, x2, x3 = get_training_data(board)
+                x, x2 = get_training_data(board)
             except Exception as e:
                 continue
 
-            yield (x, x2, x3), score
+            #yield (x, x2, x3), score
+            yield (x, x2), score
     return gen
 
 def mapper(X, y):
     x1 = X[0]
     x2 = X[1]
-    x3 = X[2]
-
-    print(y)
-
+    #x3 = X[2]
     y = tf.math.sigmoid((y / 600))
     #p = (score / 600.0).sigmoid()
 
-    return (x1, x2, x3), y
+    #return (x1, x2, x3), y
+    return (x1, x2), y
 def get_dataset(db_path, batch_size=200):
     gen = get_generator()
     train_dataset = tf.data.Dataset.from_generator(
         gen,
         args=[db_path],
         #output_signature=((tf.TensorSpec(768,), tf.TensorSpec(768,), tf.TensorSpec(19)), tf.TensorSpec(None))
-        output_signature=((tf.TensorSpec(40960,), tf.TensorSpec(40960,), tf.TensorSpec(19)), tf.TensorSpec(None))
+        #output_signature=((tf.TensorSpec(40960,), tf.TensorSpec(40960,), tf.TensorSpec(19)), tf.TensorSpec(None))
+        output_signature=((tf.TensorSpec(40960,), tf.TensorSpec(40960,)), tf.TensorSpec(None))
         #output_signature=((tf.SparseTensorSpec((774,)), tf.SparseTensorSpec((15,))), tf.TensorSpec(None))
     )
 

@@ -25,12 +25,12 @@ def get_model():
     x2 = l.Dense(FEATURE_TRANSFORM)(input_opp)
     x2 = l.ReLU()(x2)
 
-    input_material = l.Input(shape=(19))
-    x3 = l.Dense(64)(input_material)
-    x3 = l.ReLU()(x3)
+    #input_material = l.Input(shape=(19))
+    #x3 = l.Dense(64)(input_material)
+    #x3 = l.ReLU()(x3)
 
-    x = l.Concatenate()([x1, x2, x3])
-    x = l.Dense(64)(x)
+    x = l.Concatenate()([x1, x2])
+    x = l.Dense(32)(x)
     x = l.ReLU()(x)
     x = l.Dense(32)(x)
     x = l.ReLU()(x)
@@ -38,7 +38,8 @@ def get_model():
     output =l.Dense(1, activation='linear')(x)
 
     model = tf.keras.Model(
-        inputs=[input_player, input_opp, input_material],
+        #inputs=[input_player, input_opp, input_material],
+        inputs=[input_player, input_opp],
         outputs=output
     )
 
